@@ -1,0 +1,18 @@
+.gameboard{
+    background-color: #000000;
+    width: 30vw;
+    height: 30vw;
+    margin: 0 auto;
+    display: -webkit-flex;
+    -webkit-flex-flow: row wrap;
+    -webkit-align-content: flex-end; 
+    display: flex;
+    flex-flow: row wrap;
+    align-content: space-between;
+    justify-content: space-between;
+}
+.box{
+    background-color: #ffffff;
+    width: 9.5vw;
+    height: 9.5vw;
+}
