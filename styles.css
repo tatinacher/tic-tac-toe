@@ -1,5 +1,5 @@
-.gameboard{
-    background-color: #000000;
+.gameboard {
+    background-color: #ccc;
     width: 30vw;
     height: 30vw;
     margin: 0 auto;
@@ -11,8 +11,17 @@
     align-content: space-between;
     justify-content: space-between;
 }
-.box{
+.cell {
     background-color: #ffffff;
     width: 9.5vw;
     height: 9.5vw;
+}
+.close-x {
+    stroke:#58a8ff;
+    fill: transparent;
+    stroke-linecap: round;
+    stroke-width: 5;
+}
+.hidden {
+    display: none;
 }
