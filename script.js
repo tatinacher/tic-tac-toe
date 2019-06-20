@@ -1,18 +1,28 @@
 "use strict"
 
+const CIRCLE = 'O';
+const CROSS = 'X';
+const CELL_CLASS_PREFIX = 'cell_id_';
 const NUMBER_OF_STEPS = 9;
+const WIN_VARIANTS = [  [0,1,2],[0,3,6],[0,4,8],
+                        [3,4,5],[6,7,8],[1,4,7],
+                        [2,5,8],[2,4,6]];
 
 function Game(){
-    this._step = 0;
+    this._step = 1;
     this._moves = new Array(9).fill('');
+    this._timerId;
 }
 
-Game.prototype._NUMBER_OF_STEPS = 9;
+Game.prototype._showCell = function(element, cellClassName){
+    const cell = document.querySelector('.' + cellClassName);
+    let className = (element === CIRCLE) ? 'circle' : 'cross';
 
-Game.prototype._showCell = function(element, cell){
-    let className = (element === 'O') ? 'circle' : 'cross';
-    
-    if (cell.hasChildNodes()){
+    try {
+        if (!cell.hasChildNodes()){
+            return;
+        }
+
         let children = cell.childNodes;
         for (let i = 0; i < children.length; ++i) {
             if (children[i].classList === undefined){
@@ -22,32 +32,110 @@ Game.prototype._showCell = function(element, cell){
                 children[i].classList.remove('hidden');
             }
         }
+    } catch (e) {
+        return;
+    }
+    
+}
+
+Game.prototype._randomFromArray = function(items){
+    return items[Math.floor(Math.random()*items.length)];
+}
+
+Game.prototype._canWinIndex = function(player){
+    let filledCellsByPlayer = [], canWinIndex=null;
+    this._moves.forEach((el, index) => { if (el === player) { filledCellsByPlayer.push(index); }});
+
+    WIN_VARIANTS.forEach(variant => {
+        const result = variant.filter(cell => !filledCellsByPlayer.includes(cell));
+
+        // If there is only one cell and it is not taken by other player;
+        if(result.length === 1 && this._moves[result[0]] === ''){
+            canWinIndex = result[0];
+        }
+    });
+
+    return canWinIndex;
+}
+
+Game.prototype._isPlayerWon = function(player){
+    let filledCellsByPlayer = [], canWinIndex=null;
+    this._moves.forEach((el, index) => { if (el === player) { filledCellsByPlayer.push(index); }});
+    WIN_VARIANTS.forEach(variant => {
+        const result = variant.filter(cell => !filledCellsByPlayer.includes(cell));
+
+        if(result.length === 0){
+            console.log(this._timerId);
+            clearTimeout(this._timerId);
+            this._endGame(player, variant);
+        }
+    });
+    return canWinIndex;
+}
+
+Game.prototype._circleMove = function(){
+    console.log('circle', this._timerId)
+    if(this._step === 2){
+        /*  Choose strategy to win. If center cell is empty we choose it.
+            If not, we choose any cell in the corner. */
+        const i = (this._moves[4] === '') ? 4 : this._randomFromArray([0,2,6,8]);
+        const cellClassName = CELL_CLASS_PREFIX + i;
+        this._doStep(CIRCLE, cellClassName, i);
+    } else {
+        let index = this._canWinIndex(CIRCLE);
+        if(!index){
+            index = this._canWinIndex(CROSS);
+            if(!index){
+                let emptyIndexes = [];
+                this._moves.forEach((el, index) => { if (el === '') { emptyIndexes.push(index); }});
+                index = this._randomFromArray(emptyIndexes);
+            }
+        }
+        const cellClassName = CELL_CLASS_PREFIX + index;
+        this._doStep(CIRCLE, cellClassName, index);
     }
 }
 
-Game.prototype.playerMakeMove = function(event){
-    // get id of box from class name
-    const className = event.target.className.split(' ').find(el => 
-        el.startsWith('cell_id_'));
+Game.prototype._crossMove = function(event, gameboard){
+    let id, cellClassName;
 
-    if (className === undefined){
+    // Get id of cell from class name.
+    try{
+        cellClassName = event.target.className.split(' ').find(el => 
+            el.startsWith(CELL_CLASS_PREFIX));
+        id = cellClassName.slice(-1);
+    } catch (e) {
+        gameboard.classList.remove('not-clickable');
         return;
     }
-        
-    const id = className.slice(-1);
-    let cell = document.querySelector('.' + className);
 
+    this._doStep(CROSS, cellClassName, id);
+}
+
+Game.prototype._doStep = function(player, cellClassName, id){
+    this._moves[id] = player;
+    this._showCell(player, cellClassName);
     this._step += 1;
-    this._moves[id] = (this._step % 2 == 0) ? 'O' : 'X';
-    this._showCell(this._moves[id], cell);
+    this._isPlayerWon(player);
+}
 
+Game.prototype.playerMove = function(event){
+
+    let gameboard = document.querySelector('.gameboard');
+    gameboard.classList.add('not-clickable');
+
+    this._crossMove(event, gameboard);
     if (this._step === NUMBER_OF_STEPS){
         this._endGame();
     }
+    this._timerId = setTimeout(this._circleMove.bind(this), 1000);
+    gameboard.classList.remove('not-clickable');
 }
 
-Game.prototype._endGame = function(){
-    console.log('endgame');
+Game.prototype._endGame = function(player, winMove){
+    console.log('end game', player, winMove);
+    let gameboard = document.querySelector('.gameboard'), id, cellClassName;
+    gameboard.classList.add('not-clickable');
 }
 
 function prepareGame(){
@@ -75,10 +163,10 @@ function prepareGame(){
 
 function ready() {
     prepareGame();
-    let game = new Game();
 
-    let playerMakeMove = event => game.playerMakeMove(event);
-    document.querySelector('.gameboard').addEventListener("click", playerMakeMove);
+    let game = new Game();
+    let playerMove = event => game.playerMove(event);
+    document.querySelector('.gameboard').addEventListener("click", playerMove);
 }
 
 document.addEventListener("DOMContentLoaded", ready);
