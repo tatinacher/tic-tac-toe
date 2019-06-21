@@ -22,6 +22,10 @@ const CIRCLE_SVG = `
 function Game(){
     this._step = 1;
     this._moves = new Array(9).fill('');
+    this._isGameEnded = false;
+    this._gameboard = document.querySelector('.gameboard');
+    this.runLink = this.run.bind(this);
+    this._addEvents();
 }
 
 Game.prototype._showCell = function(element, cellClassName){
@@ -45,7 +49,6 @@ Game.prototype._showCell = function(element, cellClassName){
     } catch (e) {
         return;
     }
-    
 }
 
 Game.prototype._randomFromArray = function(items){
@@ -58,7 +61,7 @@ Game.prototype._canWinIndex = function(player){
 
     WIN_VARIANTS.forEach(variant => {
         const result = variant.filter(cell => !filledCellsByPlayer.includes(cell));
-
+        
         // If there is only one cell and it is not taken by other player;
         if(result.length === 1 && this._moves[result[0]] === ''){
             canWinIndex = result[0];
@@ -75,7 +78,6 @@ Game.prototype._isPlayerWon = function(player){
         const result = variant.filter(cell => !filledCellsByPlayer.includes(cell));
 
         if(result.length === 0){
-            clearTimeout(this._timerId);
             this._endGame(player, variant);
         }
     });
@@ -91,9 +93,9 @@ Game.prototype._circleMove = function(){
         this._doStep(CIRCLE, cellClassName, i);
     } else {
         let index = this._canWinIndex(CIRCLE);
-        if(!index){
+        if(index === null){
             index = this._canWinIndex(CROSS);
-            if(!index){
+            if(index === null){
                 let emptyIndexes = [];
                 this._moves.forEach((el, index) => { if (el === '') { emptyIndexes.push(index); }});
                 index = this._randomFromArray(emptyIndexes);
@@ -103,8 +105,7 @@ Game.prototype._circleMove = function(){
         this._doStep(CIRCLE, cellClassName, index);
     }
 
-    let gameboard = document.querySelector('.gameboard');
-    gameboard.classList.remove('not-clickable');
+    this._gameboard.classList.remove('not-clickable');
 }
 
 Game.prototype._crossMove = function(event, gameboard){
@@ -130,14 +131,16 @@ Game.prototype._doStep = function(player, cellClassName, id){
     this._isPlayerWon(player);
 }
 
-Game.prototype.playerMove = function(event){
-
-    let gameboard = document.querySelector('.gameboard');
-    gameboard.classList.add('not-clickable');
+Game.prototype.run = function(event){
+    this._gameboard.classList.add('not-clickable');
     const step = this._step;
-    this._crossMove(event, gameboard);
+    this._crossMove(event, this._gameboard);
 
     if(step === this._step){
+        return;
+    }
+
+    if(this._isGameEnded){
         return;
     }
 
@@ -145,42 +148,117 @@ Game.prototype.playerMove = function(event){
         this._endGame();
         return;
     }
+
     setTimeout(this._circleMove.bind(this), 1000);
 }
 
-Game.prototype._endGame = function(player, winMove){
-    console.log('end game', player, winMove);
-    let winner = (player === CIRCLE) ? CIRCLE_SVG : CROSS_SVG;
-    winner = '<div class="svg-container">' + winner + '</div>';
-    let text = player ? 'Winner is ' + winner : 'Tie' + CIRCLE_SVG + CROSS_SVG;
-    let infoBox = document.querySelector('.info-box');
-    let infoBoxText = document.querySelector('.info-box__text');
-    let gameboard = document.querySelector('.gameboard');
-    gameboard.classList.add('not-clickable', 'blurry');
+Game.prototype._getCoordinates = function(winMove){
+    let coordinates = {};
+    winMove.sort();
+    let firstPoint = winMove[0];
+    let lastPoint = winMove[2];
+    coordinates.y1 = this._getCoordinate(Math.floor(firstPoint / 3));
+    coordinates.y2 = this._getCoordinate(Math.floor(lastPoint / 3));
+    coordinates.x1 = this._getCoordinate(firstPoint % 3);
+    coordinates.x2 = this._getCoordinate(lastPoint % 3);
 
-    infoBox.classList.remove('hidden');
-    infoBoxText.innerHTML = text;
-
+    if (coordinates.x1 === coordinates.x2){
+        coordinates.y1 = '0%';
+        coordinates.y2 = '100%';
+    }
+    if (coordinates.y1 === coordinates.y2){
+        coordinates.x1 = '0%';
+        coordinates.x2 = '100%';
+    }
+    return coordinates;
 }
 
-function prepareGame(){
-    let element = document.querySelector('.gameboard');
+Game.prototype._getCoordinate = function(number){
+    return  (number === 0) ? '15%' : 
+            (number === 1) ? '50%': '85%';
+}
+
+Game.prototype._prepareResultText = function(player){
+    let infoBoxText = document.querySelector('.info-box__text');
+    let winner = (player === CIRCLE) ? CIRCLE_SVG : CROSS_SVG;
+    winner = '<div class="svg-container">' + winner + '</div>';
+    const text = player ? 'Winner is ' + winner : 'Tie' + CIRCLE_SVG + CROSS_SVG;
+    infoBoxText.innerHTML = text;
+}
+
+Game.prototype._showInfoBox = function(){
+    this._gameboard.classList.add('not-clickable', 'blurry');
+    let infoBox = document.querySelector('.info-box');
+    infoBox.classList.remove('hidden');
+}
+
+Game.prototype._showResults = function(player){
+    this._prepareResultText(player);
+    this._showInfoBox();
+}
+
+Game.prototype._drawWinLine = function(winMove){
+    let line = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    line.classList.add('line');
+    
+    const coordinates = this._getCoordinates(winMove);
+    line.innerHTML =    "<line x1=" + coordinates.x1 + " y1=" + coordinates.y1+ 
+                        " x2=" + coordinates.x2 + " y2=" + coordinates.y2 + 
+                        " style='stroke:rgb(89, 168, 251); stroke-width:11'/> ";
+    this._gameboard.appendChild(line);
+}
+
+Game.prototype._endGame = function(player, winMove){
+    this._isGameEnded = true;
+    this._removeEvents();
+
+    if(winMove){
+        this._drawWinLine(winMove);
+    }
+
+    setTimeout(this._showResults.bind(this), 1000, player);
+}
+
+Game.prototype._clear = function(){
+    this._gameboard.innerHTML = '';
+    this._gameboard.classList.remove('not-clickable', 'blurry');
+
+    let text = document.querySelector('.info-box__text');
+    text.innerHTML = '';
+
+    let infoBox = document.querySelector('.info-box');
+    infoBox.classList.add('hidden');
+}
+
+Game.prototype._drawGameboard = function(){
     for(let i = 0; i < NUMBER_OF_STEPS; i++){
         let child = document.createElement('div');
         child.className = "cell cell_id_" + i ;
         let crossAndCircle =   `<div class="circle hidden">` + CIRCLE_SVG + `</div>
                                 <div class="cross hidden">` +  CROSS_SVG + `</div>`;
         child.innerHTML = crossAndCircle;
-        element.appendChild(child);
+        this._gameboard.appendChild(child);
     }
 }
 
-function ready() {
-    prepareGame();
+Game.prototype.prepare = function(){
+    this._clear();
+    this._drawGameboard();
+}
 
+Game.prototype._addEvents = function () {
+    this._gameboard.addEventListener('click', this.runLink);
+}
+
+Game.prototype._removeEvents = function () {
+    this._gameboard.removeEventListener('click', this.runLink);
+}
+
+function ready() {
+    document.querySelector('.start-game_button').removeEventListener("click", ready);
     let game = new Game();
-    let playerMove = event => game.playerMove(event);
-    document.querySelector('.gameboard').addEventListener("click", playerMove);
+    game.prepare();
+    document.querySelector('.start-game_button').addEventListener("click", ready);
 }
 
 document.addEventListener("DOMContentLoaded", ready);
