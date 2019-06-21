@@ -22,15 +22,54 @@
     stroke-linecap: round;
     stroke-width: 5;
 }
-.circle, .cross{
+.circle, .cross {
     opacity: 1;
     transition: opacity 0.3s ease-out;
 }
-.cross.hidden, .circle.hidden {
+.cross.hidden, .circle.hidden, .info-box.hidden {
     opacity: 0; 
     height: 0;
     overflow: hidden;
 }
-.not-clickable{
+.not-clickable {
     pointer-events:none;
+}
+.info-box {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    top: 0;
+    margin-top: auto;
+    margin-bottom: auto;
+    font-size: 60px;
+    width: 35vw;
+    height: 35vw;
+    transition: opacity 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+.blurry {
+    opacity: 0.05;
+}
+button {
+    background: #59a8fb;
+    font-size: 25px;
+    padding: 15px;
+    border-radius: 5px;
+    color: #fff;
+    border: 0;
+    font-weight: 100;
+    margin-top: 30px;
+}
+.svg-container svg {
+    max-width: 100px;
+}
+.info-box__text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
